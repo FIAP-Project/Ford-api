@@ -1,0 +1,21 @@
+{
+  "brand": "Ford",
+  "model": "Ranger Raptor",
+  "version": "2024",
+  "attributes": [
+    "motor",
+    "potencia",
+    "torque maximo",
+    "transmissao",
+    "tracao",
+    "amortecedores",
+    "0-100 km/h",
+    "modos de conducao",
+    "modos de volante",
+    "modos de escapamento",
+    "modos de amortecedor",
+    "farois",
+    "rodas e pneus",
+    "preco"
+  ]
+}
