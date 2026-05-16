@@ -42,8 +42,9 @@ class QueryRepository:
         self, query: VehicleQuery, specs: Sequence[ClaudeSpec]
     ) -> None:
         for spec in specs:
-            query.specs.append(
+            self._session.add(
                 VehicleSpec(
+                    query_id=query.id,
                     attribute=spec.attribute,
                     value=spec.value,
                     available=spec.available,
