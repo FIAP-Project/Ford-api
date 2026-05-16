@@ -18,6 +18,8 @@ if config.config_file_name:
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
@@ -39,8 +41,7 @@ def do_run_migrations(connection: Connection) -> None:
         include_schemas=True,
         include_object=include_object,
     )
-    with context.begin_transaction():
-        context.run_migrations()
+    context.run_migrations()
 
 
 async def run_migrations_online() -> None:
@@ -48,7 +49,7 @@ async def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
     )
-    async with connectable.connect() as connection:
+    async with connectable.begin() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
 
