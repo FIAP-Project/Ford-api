@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from vehicle_service.models import VehicleQuery, VehicleSpec
-from vehicle_service.services.claude_client import ClaudeSpec
+
+if TYPE_CHECKING:
+    from vehicle_service.services.claude_client import ClaudeSpec
 
 
 class QueryRepository:

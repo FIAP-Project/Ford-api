@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ford_shared.db import Database
 from ford_shared.events import EventBus
-from vehicle_service.repositories import QueryRepository
-from vehicle_service.services import ClaudeClient, VehicleService
+from vehicle_service.repositories.query_repository import QueryRepository
+from vehicle_service.services.claude_client import ClaudeClient
+from vehicle_service.services.vehicle_service import VehicleService
 
 
 async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:

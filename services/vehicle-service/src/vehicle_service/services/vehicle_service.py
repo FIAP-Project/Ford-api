@@ -15,7 +15,7 @@ from ford_shared.events import (
     VehicleQueryCompletedEvent,
     VehicleQueryRequestedEvent,
 )
-from vehicle_service.repositories import QueryRepository
+from vehicle_service.repositories.query_repository import QueryRepository
 from vehicle_service.schemas import QueryRequest, QueryResponse, QuerySummary, SpecOut
 from vehicle_service.services.claude_client import ClaudeClient
 from vehicle_service.services.specs_normalizer import normalize_specs
