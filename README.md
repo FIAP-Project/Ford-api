@@ -4,6 +4,16 @@ Backend modular para o desafio Ford, organizado como 4 microsserviços em Python
 
 O projeto cobre todos os critérios da Sprint **SOA + Web Services (100 pts)** e **Cybersecurity (60 pts)**.
 
+## Integrantes
+
+| Nome | RM |
+|------|----|
+| Felipe Cerboncini Cordeiro | 554909 |
+| Pedro Henrique Martins Alves dos Santos | 558107 |
+| Milena Codinhoto da Silva | 554682 |
+| Anthony K. Motobe | 558488 |
+| Evellyn Valencia | 557929 |
+
 ---
 
 ## 1. Arquitetura
