@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from ford_shared.security.dependencies import Principal, get_current_principal
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +20,6 @@ from auth_service.schemas import (
     UserOut,
 )
 from auth_service.services import AuthService
-from ford_shared.security.dependencies import Principal, get_current_principal
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)

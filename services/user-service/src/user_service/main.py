@@ -4,11 +4,11 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
 from ford_shared.app import apply_standard_middleware
 from ford_shared.db import Database
 from ford_shared.events import EventBus
 from ford_shared.security.jwt import JWTService
+
 from user_service.config import get_settings
 from user_service.controllers import health_router, profile_router
 from user_service.events import start_consumers

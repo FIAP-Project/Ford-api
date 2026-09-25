@@ -1,5 +1,4 @@
 import pytest
-
 from ford_shared.security import Role
 from ford_shared.security.jwt import InvalidTokenError, JWTService
 

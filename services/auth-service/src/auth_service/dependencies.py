@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 from fastapi import Depends, Request
+from ford_shared.db import Database
+from ford_shared.events import EventBus
+from ford_shared.security.jwt import JWTService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth_service.repositories import RefreshTokenRepository, UserRepository
 from auth_service.services import AuthService
-from ford_shared.db import Database
-from ford_shared.events import EventBus
-from ford_shared.security.jwt import JWTService
 
 
 async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:

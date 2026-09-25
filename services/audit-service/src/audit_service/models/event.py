@@ -4,12 +4,11 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from ford_shared.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
-
-from ford_shared.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class AuditEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):

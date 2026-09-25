@@ -10,10 +10,11 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
-from audit_service.repositories import EventRepository
 from ford_shared.db import Database
 from ford_shared.events import EventBus, EventEnvelope
 from ford_shared.security.signature import sign_payload
+
+from audit_service.repositories import EventRepository
 
 logger = logging.getLogger(__name__)
 

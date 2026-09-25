@@ -3,11 +3,11 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
+from ford_shared.security.dependencies import Principal, get_current_principal
+from ford_shared.security.rbac import Role, role_at_least
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from ford_shared.security.dependencies import Principal, get_current_principal
-from ford_shared.security.rbac import Role, role_at_least
 from vehicle_service.dependencies import get_vehicle_service
 from vehicle_service.schemas import QueryRequest, QueryResponse, QuerySummary
 from vehicle_service.services import VehicleService

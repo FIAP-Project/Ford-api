@@ -11,9 +11,8 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
-
 from ford_shared.security.rbac import Role
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 _PASSWORD_PATTERN = re.compile(
     r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,128}$"
@@ -53,7 +52,7 @@ class RefreshRequest(BaseModel):
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
-    token_type: str = "Bearer"
+    token_type: str = "Bearer"  # noqa: S105 -- auth scheme label, not a secret
     expires_in: int  # seconds for access token
 
 

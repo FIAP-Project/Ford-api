@@ -3,12 +3,12 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from ford_shared.security.dependencies import Principal
+from ford_shared.security.rbac import Role, require_role
 
 from audit_service.dependencies import get_audit_service
 from audit_service.schemas import AuditEventOut
 from audit_service.services import AuditService
-from ford_shared.security.dependencies import Principal
-from ford_shared.security.rbac import Role, require_role
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 

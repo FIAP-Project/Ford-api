@@ -391,3 +391,65 @@ Repita o padrão para os outros serviços. Postgres/RabbitMQ podem rodar via `do
 | Rate limit | slowapi (Redis backend) + Nginx `limit_req_zone` |
 | AI | Anthropic SDK 0.34 (Claude) + tenacity (retry) |
 | Reverse proxy / TLS | Nginx 1.27-alpine |
+
+---
+
+## 14. Sprint 3 — Cybersecurity: Pipeline DevSecOps (C1)
+
+Objetivo: mostrar como a segurança é incorporada ao ciclo de desenvolvimento — do commit ao deploy — em vez de ficar restrita a um documento. O pipeline vive em [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (GitHub Actions) e roda em todo `push` e em toda Pull Request contra `master`.
+
+### 14.1 Diagrama do pipeline
+
+```mermaid
+flowchart TD
+    Commit["git push / PR"] --> Lint
+
+    Lint["Lint (ruff)\nestilo + regras 'S' (bandit-lite)"]
+
+    Lint --> SAST
+    Lint --> SCA
+    Lint --> Secrets
+
+    SAST["SAST (Semgrep)\n--config auto + p/owasp-top-ten\nupload SARIF"]
+    SCA["SCA (pip-audit)\naudita requirements resolvidos (uv export)"]
+    Secrets["Secret scan (Gitleaks)\nvarre todo o histórico do repo"]
+
+    SAST --> Test
+    SCA --> Test
+    Secrets --> Test
+
+    Test["Tests (pytest)\npackages + services"]
+
+    Test --> Build
+
+    subgraph Build["Build & scan — matrix por serviço"]
+        direction LR
+        B1["auth-service"] --> S1["Trivy (vuln, CRITICAL/HIGH)\nupload SARIF"]
+        B2["user-service"] --> S2["Trivy (vuln, CRITICAL/HIGH)\nupload SARIF"]
+        B3["vehicle-service"] --> S3["Trivy (vuln, CRITICAL/HIGH)\nupload SARIF"]
+        B4["audit-service"] --> S4["Trivy (vuln, CRITICAL/HIGH)\nupload SARIF"]
+    end
+
+    Build --> Done["Imagens prontas para push/deploy"]
+```
+
+### 14.2 O que cada etapa reduz de risco
+
+| Etapa | Ferramenta | O que pega | Por que bloqueia o merge |
+|---|---|---|---|
+| **Lint** | ruff (regras `E,F,I,B,UP,S,N`) | Bugs óbvios, imports quebrados e o subconjunto de regras "S" (bandit-lite: `eval`, `assert` em prod, senhas hardcoded, etc.) | Falha rápida (~20s) antes de gastar tempo com scans mais pesados |
+| **SAST** | Semgrep (`auto` + `p/owasp-top-ten`) | Padrões de injeção, uso inseguro de `sa.text()`, host header, criptografia fraca — cobre o OWASP Top 10 | `--error` faz o processo sair com código != 0 se achar algo não suprimido |
+| **SCA** | pip-audit sobre o `uv.lock` exportado | CVEs conhecidas em toda dependência transitiva resolvida (não só as diretas) | `--strict` falha em qualquer vulnerabilidade não ignorada explicitamente |
+| **Secret scan** | Gitleaks (`fetch-depth: 0`) | Credenciais/tokens commitados em qualquer commit do histórico, não só no diff atual | Impede que um segredo vazado chegue a `master` mesmo se removido em commit seguinte |
+| **Tests** | pytest (packages + services) | Regressões funcionais — só roda depois que os 3 scans de segurança passam, para não gastar tempo de CI testando código já reprovado | Gate de qualidade antes do build de imagem |
+| **Build & scan** | Docker Buildx + Trivy (`scanners: vuln`) | CVEs na imagem final (SO + runtime), incluindo a camada base `python:3.12-slim` | Cada serviço builda e escaneia isoladamente (matrix `fail-fast: false`), então um serviço vulnerável não mascara os outros 3 |
+
+### 14.3 Como isso rodaria no projeto Ford
+
+1. Um dev abre PR contra `master` → todo o pipeline acima dispara automaticamente.
+2. `needs: lint` garante que SAST/SCA/secret-scan só rodam em código que já passou no lint básico — evita gastar minutos de Actions em algo que ia falhar de qualquer forma.
+3. Os três scans de segurança rodam **em paralelo** (`needs: lint` em cada um, sem dependência entre si), reduzindo o tempo total de CI antes de liberar os testes.
+4. `test` só roda depois que SAST + SCA + secret-scan passam — código com CVE ou segredo commitado nunca chega a consumir tempo de teste.
+5. `build-and-scan` só builda as imagens Docker depois que os testes passam, e escaneia cada uma delas com Trivy antes de estarem disponíveis para push/deploy.
+6. Achados verdadeiros (ex.: uma CVE real numa dependência) bloqueiam o merge; falsos positivos são suprimidos de forma auditável e documentada (`nosemgrep: <regra completa>` inline no código, `--ignore-vuln <ID>` no pip-audit), nunca desabilitando o scanner inteiro.
+7. Todas as etapas fazem upload de SARIF para a aba **Security → Code scanning** do GitHub, dando visibilidade centralizada de todos os achados (SAST + container scan) por commit/branch.

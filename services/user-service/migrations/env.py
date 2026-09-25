@@ -6,10 +6,9 @@ from logging.config import fileConfig
 
 import sqlalchemy as sa
 from alembic import context
+from ford_shared.db.base import Base
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from ford_shared.db.base import Base
 from user_service.models import UserProfile  # noqa: F401
 
 config = context.config
@@ -33,7 +32,9 @@ def include_object(obj, name, type_, reflected, compare_to):
 
 
 def do_run_migrations(connection: Connection) -> None:
-    connection.execute(sa.text(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"'))
+    connection.execute(
+        sa.text(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"')  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    )
     context.configure(
         connection=connection,
         target_metadata=target_metadata,

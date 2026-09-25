@@ -11,10 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:0.4 /uv /usr/local/bin/uv
 
+RUN python -m pip uninstall -y pip
+
 WORKDIR /app
 
 # Copy workspace manifests first for layer caching.
-COPY pyproject.toml /app/pyproject.toml
+COPY pyproject.toml uv.lock /app/
 COPY packages/shared/pyproject.toml /app/packages/shared/pyproject.toml
 COPY services/auth-service/pyproject.toml /app/services/auth-service/pyproject.toml
 
@@ -22,13 +24,17 @@ COPY services/auth-service/pyproject.toml /app/services/auth-service/pyproject.t
 COPY packages/shared /app/packages/shared
 COPY services/auth-service /app/services/auth-service
 
-RUN uv sync --frozen --package auth-service || uv sync --package auth-service
+RUN uv sync --frozen --package auth-service
 
 ENV PATH="/app/.venv/bin:${PATH}"
 
 WORKDIR /app/services/auth-service
 COPY services/auth-service/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app \
+    && chown -R app:app /app
+USER app
 
 EXPOSE 8001
 ENTRYPOINT ["/entrypoint.sh"]

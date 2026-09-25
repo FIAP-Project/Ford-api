@@ -8,13 +8,13 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status
-
 from ford_shared.events import (
     EventBus,
     EventType,
     VehicleQueryCompletedEvent,
     VehicleQueryRequestedEvent,
 )
+
 from vehicle_service.repositories.query_repository import QueryRepository
 from vehicle_service.schemas import QueryRequest, QueryResponse, QuerySummary, SpecOut
 from vehicle_service.services.claude_client import ClaudeClient
