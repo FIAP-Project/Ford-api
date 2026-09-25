@@ -8,9 +8,12 @@ from ford_shared.app import apply_standard_middleware
 from ford_shared.db import Database
 from ford_shared.events import EventBus
 from ford_shared.security.jwt import JWTService
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from audit_service.config import get_settings
 from audit_service.controllers import audit_router, health_router
+from audit_service.controllers.audit_controller import limiter
 from audit_service.events import start_consumers
 
 logger = logging.getLogger(__name__)
@@ -57,6 +60,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     apply_standard_middleware(app, settings.cors_allowed_origins)
+
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
     app.include_router(health_router, prefix="/audit")
     app.include_router(audit_router)
     return app

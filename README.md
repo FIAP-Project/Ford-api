@@ -405,3 +405,43 @@ flowchart TD
 5. `build-and-scan` só builda as imagens Docker depois que os testes passam, e escaneia cada uma delas com Trivy antes de estarem disponíveis para push/deploy.
 6. Achados verdadeiros (ex.: uma CVE real numa dependência) bloqueiam o merge; falsos positivos são suprimidos de forma auditável e documentada (`nosemgrep: <regra completa>` inline no código, `--ignore-vuln <ID>` no pip-audit), nunca desabilitando o scanner inteiro.
 7. Todas as etapas fazem upload de SARIF para a aba **Security → Code scanning** do GitHub, dando visibilidade centralizada de todos os achados (SAST + container scan) por commit/branch.
+
+---
+
+## 15. Sprint 3 — Cybersecurity: Segurança em Código e Infraestrutura (C2)
+
+Objetivo: aplicar controles concretos de segurança no código e na infraestrutura do Ford-api. O rubric original cita papéis genéricos ("Brigadista, Gestor, Administrador") e segurança MQTT/TLS para IoT — nenhum dos dois existe no domínio do Ford-api (que tem os papéis `user`/`analyst`/`admin` e nenhum componente IoT), então os controles abaixo foram adaptados para o domínio real do projeto: `auth-service`, `user-service`, `vehicle-service` e `audit-service`.
+
+### 15.1 Criptografia local (dados em repouso)
+
+PII (`full_name` do perfil de usuário) é criptografada com Fernet (AES-128-CBC + HMAC autenticado) antes de ser persistida no Postgres, e descriptografada apenas na camada de serviço ao montar a resposta:
+
+- [`packages/shared/src/ford_shared/security/crypto.py`](packages/shared/src/ford_shared/security/crypto.py) — `FieldCipher`, wrapper fino sobre `cryptography.fernet.Fernet`.
+- [`services/user-service/src/user_service/services/profile_service.py`](services/user-service/src/user_service/services/profile_service.py) — `ProfileService` criptografa em `update_full_name()` antes de escrever no repositório, e descriptografa em `_to_out()` ao montar o DTO de saída. O repositório e o ORM nunca veem o texto plano nem o objeto `UserProfile` é mutado in-place com o valor decifrado (evita reflush acidental do plaintext pelo SQLAlchemy).
+- [`services/user-service/src/user_service/events/consumers.py`](services/user-service/src/user_service/events/consumers.py) — o mesmo `full_name` vindo do evento `user.registered` também é criptografado antes do upsert.
+- Chave via variável de ambiente `FIELD_ENCRYPTION_KEY` (ver [`.env.example`](.env.example)), nunca hardcoded.
+- Migração [`0002_widen_full_name_for_encryption.py`](services/user-service/migrations/versions/0002_widen_full_name_for_encryption.py) amplia a coluna de `VARCHAR(120)` para `TEXT`, já que o ciphertext é maior que o texto original.
+
+### 15.2 Hardening de API
+
+| Controle | Onde | Detalhe |
+|---|---|---|
+| Rate limiting | `slowapi` em todos os controllers HTTP dos 4 serviços | `user-service` e `audit-service` não tinham nenhum limite antes deste trabalho; `vehicle-service` tinha rate limit só em `POST /query` — agora `GET /queries` e `GET /queries/{id}` também estão cobertos, por consistência |
+| Validação de entrada | Pydantic v2 em todos os schemas de request | Rejeita payload malformado antes de chegar à camada de serviço |
+| JWT seguro | [`packages/shared/src/ford_shared/security/jwt.py`](packages/shared/src/ford_shared/security/jwt.py) | Tokens agora carregam `iss` (`ford-auth-service`) e `aud` (`ford-api`), e `decode()` valida ambos explicitamente via `jwt.decode(..., issuer=ISSUER, audience=AUDIENCE)` — sem isso, `python-jose` ignora essas claims silenciosamente mesmo que estejam no payload |
+
+### 15.3 Controle de acesso por perfil (RBAC)
+
+Papéis reais do Ford-api: `user` < `analyst` < `admin` (hierarquia em [`packages/shared/src/ford_shared/security/rbac.py`](packages/shared/src/ford_shared/security/rbac.py)). Auditoria dos 4 serviços confirmou que o controle de acesso já é aplicado corretamente:
+
+- `user-service`: `PUT /{user_id}/role` exige `admin` via `Depends(require_role(Role.ADMIN))`; listar todos os perfis exige `analyst+`.
+- `vehicle-service`: `VehicleService.get()`/`history()` restringem cada usuário aos próprios registros a menos que `analyst+`, prevenindo IDOR (usuário comum não pode ler `query_id` de outro usuário via `GET /queries/{id}`).
+- `audit-service`: leitura de eventos de auditoria é uma trilha compartilhada, sem dado pessoal exposto a mais que o já visível no próprio evento.
+
+Nenhuma escalação de privilégio ou bypass de propriedade foi encontrada; o trabalho de hardening deste item foi consolidar a aplicação de rate limit no `vehicle-service` (item 15.2) para que a superfície de enumeração fique consistente entre endpoints do mesmo controller.
+
+### 15.4 IaC security
+
+- **Dockerfiles** (`auth-service`, `user-service`, `vehicle-service`, `audit-service`): adicionado `HEALTHCHECK` apontando para o endpoint de liveness de cada serviço (`/auth/health`, `/users/health`, `/vehicles/health`, `/audit/health`), usando `urllib` da stdlib — evita instalar `curl` na imagem só para o probe.
+- **[`docker-compose.yml`](docker-compose.yml)**: Postgres, RabbitMQ e Redis passaram de `ports:` (publicados no host) para `expose:` (visíveis só na rede interna do Compose) — mesma postura que os 4 serviços de aplicação já seguiam. Reduz a superfície de ataque em ambientes onde o host tem outras interfaces de rede expostas.
+- Segurança MQTT/TLS para IoT não se aplica: o Ford-api não tem nenhum componente de telemetria de dispositivo/IoT.

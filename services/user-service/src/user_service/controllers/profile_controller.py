@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from ford_shared.security.dependencies import Principal, get_current_principal
 from ford_shared.security.rbac import Role, require_role
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from user_service.dependencies import get_profile_service
 from user_service.schemas import ProfileOut, ProfileUpdate
@@ -12,6 +14,7 @@ from user_service.schemas.profile import RoleUpdate
 from user_service.services import ProfileService
 
 router = APIRouter(prefix="/users", tags=["users"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get(
@@ -19,7 +22,9 @@ router = APIRouter(prefix="/users", tags=["users"])
     response_model=ProfileOut,
     summary="Return the caller's profile",
 )
+@limiter.limit("60/minute")
 async def me(
+    request: Request,
     principal: Principal = Depends(get_current_principal),
     service: ProfileService = Depends(get_profile_service),
 ) -> ProfileOut:
@@ -31,7 +36,9 @@ async def me(
     response_model=ProfileOut,
     summary="Update the caller's profile (full_name only)",
 )
+@limiter.limit("20/minute")
 async def update_me(
+    request: Request,
     payload: ProfileUpdate,
     principal: Principal = Depends(get_current_principal),
     service: ProfileService = Depends(get_profile_service),
@@ -44,7 +51,9 @@ async def update_me(
     response_model=list[ProfileOut],
     summary="List user profiles (analyst+)",
 )
+@limiter.limit("30/minute")
 async def list_profiles(
+    request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     _: Principal = Depends(require_role(Role.ANALYST)),
@@ -59,7 +68,9 @@ async def list_profiles(
     status_code=status.HTTP_200_OK,
     summary="Change a user's role (admin-only)",
 )
+@limiter.limit("10/minute")
 async def update_role(
+    request: Request,
     user_id: UUID,
     payload: RoleUpdate,
     _: Principal = Depends(require_role(Role.ADMIN)),

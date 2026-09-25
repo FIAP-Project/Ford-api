@@ -39,6 +39,8 @@ class BaseServiceSettings(BaseSettings):
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 7
 
+    field_encryption_key: str = Field(..., min_length=32)
+
     cors_allowed_origins: str | list[str] = Field(
         default_factory=lambda: ["https://localhost"]
     )

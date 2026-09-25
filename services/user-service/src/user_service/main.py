@@ -7,10 +7,14 @@ from fastapi import FastAPI
 from ford_shared.app import apply_standard_middleware
 from ford_shared.db import Database
 from ford_shared.events import EventBus
+from ford_shared.security.crypto import FieldCipher
 from ford_shared.security.jwt import JWTService
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from user_service.config import get_settings
 from user_service.controllers import health_router, profile_router
+from user_service.controllers.profile_controller import limiter
 from user_service.events import start_consumers
 
 logger = logging.getLogger(__name__)
@@ -33,8 +37,9 @@ async def lifespan(app: FastAPI):
         access_token_ttl_minutes=settings.access_token_ttl_minutes,
         refresh_token_ttl_days=settings.refresh_token_ttl_days,
     )
+    app.state.field_cipher = FieldCipher(settings.field_encryption_key)
     await app.state.event_bus.connect()
-    await start_consumers(app.state.event_bus, app.state.database)
+    await start_consumers(app.state.event_bus, app.state.database, app.state.field_cipher)
     logger.info("user-service startup complete")
     try:
         yield
@@ -55,6 +60,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     apply_standard_middleware(app, settings.cors_allowed_origins)
+
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
     app.include_router(health_router, prefix="/users")
     app.include_router(profile_router)
     return app
