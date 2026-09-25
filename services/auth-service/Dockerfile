@@ -11,8 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:0.4 /uv /usr/local/bin/uv
 
-# Dependency management is entirely handled by uv above; the base image
-# bundles a pip we never use, so drop it to avoid carrying its CVEs.
 RUN python -m pip uninstall -y pip
 
 WORKDIR /app

@@ -11,7 +11,6 @@ dev = [
     "pytest-asyncio>=0.23",
     "httpx>=0.27",
     "ruff>=0.6",
-    # Transitive via httpx; pinned directly to close CVE-2026-63374/CVE-2026-64847.
     "anyio>=4.14.2",
 ]
 
@@ -22,13 +21,7 @@ members = ["packages/*", "services/*"]
 ford-shared = { workspace = true }
 
 [tool.uv]
-# Dependency cooldown: only resolve package versions published before this
-# date, to reduce exposure to compromised/malicious releases right after
-# publication. CI is pinned to uv 0.4.30, which predates the relative
-# duration syntax (uv>=0.9.17), so this uses an absolute timestamp instead
-# -- the Semgrep rule's pattern only recognizes the relative form.
 exclude-newer = "2026-09-18T00:00:00Z"  # nosemgrep: package_managers.uv.uv-missing-dependency-cooldown.uv-missing-dependency-cooldown
-# Transitive via fastapi (all services); floor set to close CVE-2026-2280/2281/248.
 constraint-dependencies = ["starlette>=1.1.0"]
 
 [tool.ruff]
@@ -38,14 +31,10 @@ extend-exclude = ["**/migrations/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "N"]
-# S101: assert is expected in tests. B008: FastAPI's Depends()/Query() in
-# default args is the framework's documented pattern, not a real bug.
 ignore = ["S101", "B008"]
 
 [tool.ruff.lint.per-file-ignores]
-# Test fixtures legitimately use literal passwords/secrets — not real creds.
 "**/tests/**" = ["S105", "S106"]
-# Long nosemgrep suppression comment with the full canonical rule ID.
 "**/migrations/env.py" = ["E501"]
 
 [tool.pytest.ini_options]

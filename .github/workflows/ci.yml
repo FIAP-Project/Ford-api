@@ -15,9 +15,6 @@ env:
   UV_VERSION: "0.4"
 
 jobs:
-  # ---------------------------------------------------------------------
-  # Stage 1 — Lint (style + basic security rules via ruff's "S"/bandit set)
-  # ---------------------------------------------------------------------
   lint:
     name: Lint (ruff)
     runs-on: ubuntu-latest
@@ -35,9 +32,6 @@ jobs:
       - name: Run ruff (lint + bandit-lite "S" rules)
         run: uv run ruff check .
 
-  # ---------------------------------------------------------------------
-  # Stage 2 — SAST (Semgrep): finds injection, auth, and crypto bug patterns
-  # ---------------------------------------------------------------------
   sast:
     name: SAST (Semgrep)
     needs: lint
@@ -64,9 +58,6 @@ jobs:
           sarif_file: semgrep.sarif
           category: semgrep
 
-  # ---------------------------------------------------------------------
-  # Stage 3 — SCA: known-vulnerability scan of every resolved dependency
-  # ---------------------------------------------------------------------
   sca:
     name: SCA (pip-audit)
     needs: lint
@@ -91,19 +82,11 @@ jobs:
         run: uv pip install pip-audit
 
       - name: Audit resolved dependencies for known CVEs
-        # PYSEC-2026-1325 (ecdsa Minerva timing attack, CVE-2024-23342): ecdsa is a
-        # transitive dependency of python-jose, which we install with the
-        # [cryptography] extra, so the actual JWT signing/verification path uses the
-        # cryptography backend, not pure-python ecdsa. Upstream has no planned fix
-        # (side-channel attacks are explicitly out of scope for python-ecdsa).
         run: |
           uv run pip-audit --strict --progress-spinner=off \
             --ignore-vuln PYSEC-2026-1325 \
             -r requirements-audit.txt
 
-  # ---------------------------------------------------------------------
-  # Stage 4 — Secret scanning: fail the build if a credential was committed
-  # ---------------------------------------------------------------------
   secret-scan:
     name: Secret scan (Gitleaks)
     needs: lint
@@ -119,9 +102,6 @@ jobs:
             zricethezav/gitleaks:latest detect \
             --source="/repo" --redact -v
 
-  # ---------------------------------------------------------------------
-  # Stage 5 — Tests: the SOA integration suite (packages + all services)
-  # ---------------------------------------------------------------------
   test:
     name: Tests (pytest)
     needs: [sast, sca, secret-scan]
@@ -140,9 +120,6 @@ jobs:
       - name: Run test suite
         run: uv run pytest packages services -q
 
-  # ---------------------------------------------------------------------
-  # Stage 6 — Build image + Stage 7 — Container scan (Trivy), per service
-  # ---------------------------------------------------------------------
   build-and-scan:
     name: Build & scan (${{ matrix.service }})
     needs: test
@@ -177,9 +154,6 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
-          # Vulnerabilities only: secrets in source are already covered by the
-          # dedicated Gitleaks job, and image-level secret scanning here mostly
-          # flags false positives from vendored third-party package docstrings.
           scanners: vuln
 
       - name: Upload Trivy SARIF to code scanning
