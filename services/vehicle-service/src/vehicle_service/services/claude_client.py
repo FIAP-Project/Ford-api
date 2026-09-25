@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 
 import anthropic
 from anthropic.types import MessageParam
+from prometheus_client import Counter, Histogram
 from pydantic import BaseModel, Field
 from tenacity import (
     retry,
@@ -27,6 +29,16 @@ from tenacity import (
 )
 
 logger = logging.getLogger(__name__)
+
+CLAUDE_REQUEST_DURATION_SECONDS = Histogram(
+    "claude_request_duration_seconds",
+    "Latency of Claude API calls for vehicle spec extraction",
+)
+CLAUDE_REQUEST_FAILURES_TOTAL = Counter(
+    "claude_request_failures_total",
+    "Failed Claude API calls for vehicle spec extraction",
+    ["reason"],
+)
 
 
 class ClaudeSpec(BaseModel):
@@ -127,41 +139,49 @@ class ClaudeClient:
         )
         messages: list[MessageParam] = [{"role": "user", "content": user_message}]
 
-        response = await self._client.messages.create(
-            model=self._model,
-            max_tokens=self._max_tokens,
-            system=[
-                {
-                    "type": "text",
-                    "text": SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            tools=[SPECS_TOOL],
-            tool_choice={"type": "tool", "name": "submit_vehicle_specs"},
-            messages=messages,
-        )
+        started = time.perf_counter()
+        try:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=self._max_tokens,
+                system=[
+                    {
+                        "type": "text",
+                        "text": SYSTEM_PROMPT,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+                tools=[SPECS_TOOL],
+                tool_choice={"type": "tool", "name": "submit_vehicle_specs"},
+                messages=messages,
+            )
 
-        tool_use = next(
-            (block for block in response.content if block.type == "tool_use"),
-            None,
-        )
-        if tool_use is None:
-            logger.error("claude.no_tool_use", extra={"stop_reason": response.stop_reason})
-            raise ValueError("Claude did not return a tool_use block")
+            tool_use = next(
+                (block for block in response.content if block.type == "tool_use"),
+                None,
+            )
+            if tool_use is None:
+                logger.error("claude.no_tool_use", extra={"stop_reason": response.stop_reason})
+                CLAUDE_REQUEST_FAILURES_TOTAL.labels(reason="no_tool_use").inc()
+                raise ValueError("Claude did not return a tool_use block")
 
-        raw_input = tool_use.input
-        if isinstance(raw_input, str):
-            raw_input = json.loads(raw_input)
-        specs_data = raw_input.get("specs", [])
+            raw_input = tool_use.input
+            if isinstance(raw_input, str):
+                raw_input = json.loads(raw_input)
+            specs_data = raw_input.get("specs", [])
 
-        specs = [ClaudeSpec(**item) for item in specs_data]
-        return ClaudeResult(
-            specs=specs,
-            raw_response={
-                "model": response.model,
-                "stop_reason": response.stop_reason,
-                "usage": response.usage.model_dump() if response.usage else {},
-                "raw_specs": specs_data,
-            },
-        )
+            specs = [ClaudeSpec(**item) for item in specs_data]
+            return ClaudeResult(
+                specs=specs,
+                raw_response={
+                    "model": response.model,
+                    "stop_reason": response.stop_reason,
+                    "usage": response.usage.model_dump() if response.usage else {},
+                    "raw_specs": specs_data,
+                },
+            )
+        except (anthropic.APIConnectionError, anthropic.APIStatusError):
+            CLAUDE_REQUEST_FAILURES_TOTAL.labels(reason="api_error").inc()
+            raise
+        finally:
+            CLAUDE_REQUEST_DURATION_SECONDS.observe(time.perf_counter() - started)

@@ -10,9 +10,13 @@ from ford_shared.middleware import (
     SecurityHeadersMiddleware,
     register_exception_handlers,
 )
+from ford_shared.observability import instrument_app
 
 
-def apply_standard_middleware(app: FastAPI, cors_allowed_origins: list[str]) -> None:
+def apply_standard_middleware(
+    app: FastAPI, cors_allowed_origins: list[str], service_name: str
+) -> None:
+    instrument_app(app, service_name)
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(

@@ -4,6 +4,7 @@ Routing key conventions:
 - user.registered
 - user.logged_in
 - auth.failed
+- user.role_changed
 - vehicle.query.requested
 - vehicle.query.completed
 """
@@ -21,6 +22,7 @@ class EventType(StrEnum):
     USER_REGISTERED = "user.registered"
     USER_LOGGED_IN = "user.logged_in"
     AUTH_FAILED = "auth.failed"
+    ROLE_CHANGED = "user.role_changed"
     VEHICLE_QUERY_REQUESTED = "vehicle.query.requested"
     VEHICLE_QUERY_COMPLETED = "vehicle.query.completed"
 
@@ -51,6 +53,13 @@ class AuthFailedEvent(_BaseEvent):
     event_type: EventType = EventType.AUTH_FAILED
     email: str
     reason: str
+
+
+class RoleChangedEvent(_BaseEvent):
+    event_type: EventType = EventType.ROLE_CHANGED
+    user_id: str
+    previous_role: str
+    new_role: str
 
 
 class VehicleQueryRequestedEvent(_BaseEvent):
