@@ -10,9 +10,11 @@ dependencies = [
     "asyncpg>=0.29",
     "aio-pika>=9.4",
     "python-jose[cryptography]>=3.3",
+    "cryptography>=42.0",
     "bcrypt>=4.0",
     "fastapi>=0.111",
     "structlog>=24.1",
+    "prometheus-client>=0.20",
 ]
 
 [build-system]

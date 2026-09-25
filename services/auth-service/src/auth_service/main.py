@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from ford_shared.app import apply_standard_middleware
 from ford_shared.db import Database
 from ford_shared.events import EventBus
+from ford_shared.observability import configure_logging
 from ford_shared.security.jwt import JWTService
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    logging.basicConfig(level=settings.log_level)
+    configure_logging(settings.service_name, settings.log_level)
 
     app.state.settings = settings
     app.state.database = Database(settings.database_url, echo=False)
@@ -58,7 +59,7 @@ def create_app() -> FastAPI:
         redoc_url=None,
         lifespan=lifespan,
     )
-    apply_standard_middleware(app, settings.cors_allowed_origins)
+    apply_standard_middleware(app, settings.cors_allowed_origins, settings.service_name)
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

@@ -7,13 +7,14 @@ from uuid import UUID
 
 from ford_shared.db import Database
 from ford_shared.events import EventBus, EventEnvelope, EventType
+from ford_shared.security.crypto import FieldCipher
 
 from user_service.repositories import ProfileRepository
 
 logger = logging.getLogger(__name__)
 
 
-def make_user_registered_handler(database: Database):
+def make_user_registered_handler(database: Database, cipher: FieldCipher):
     async def _handle(envelope: EventEnvelope) -> None:
         payload = envelope.payload
         auth_user_id = UUID(payload["user_id"])
@@ -27,7 +28,7 @@ def make_user_registered_handler(database: Database):
                 auth_user_id=auth_user_id,
                 email=email,
                 role=role,
-                full_name=full_name,
+                full_name=cipher.encrypt(full_name),
             )
             logger.info(
                 "profile.upserted_from_event",
@@ -37,9 +38,11 @@ def make_user_registered_handler(database: Database):
     return _handle
 
 
-async def start_consumers(event_bus: EventBus, database: Database) -> None:
+async def start_consumers(
+    event_bus: EventBus, database: Database, cipher: FieldCipher
+) -> None:
     await event_bus.subscribe(
         queue_name="user-service.user-registered",
         routing_keys=[EventType.USER_REGISTERED.value],
-        handler=make_user_registered_handler(database),
+        handler=make_user_registered_handler(database, cipher),
     )
