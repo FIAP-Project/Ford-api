@@ -86,7 +86,7 @@ jobs:
         run: uv pip install pip-audit
 
       - name: Audit resolved dependencies for known CVEs
-        run: uv run pip-audit --strict --progress-spinner=off
+        run: uv run pip-audit --strict --skip-editable --progress-spinner=off
 
   # ---------------------------------------------------------------------
   # Stage 4 — Secret scanning: fail the build if a credential was committed
