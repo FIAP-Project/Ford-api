@@ -11,14 +11,13 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from starlette.testclient import TestClient
-
 from audit_service.dependencies import get_audit_service
 from audit_service.main import app
 from audit_service.models import AuditEvent
 from audit_service.services import AuditService
 from ford_shared.security.jwt import JWTService
 from ford_shared.security.rbac import Role
+from starlette.testclient import TestClient
 
 JWT_SECRET = "test-jwt-secret-please-32-characters!!"
 

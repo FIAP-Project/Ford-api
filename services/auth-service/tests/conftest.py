@@ -14,14 +14,13 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.exc import IntegrityError
-from starlette.testclient import TestClient
-
 from auth_service.dependencies import get_auth_service, get_db_session
 from auth_service.main import app
 from auth_service.models import RefreshToken, User
 from auth_service.services import AuthService
 from ford_shared.security.jwt import JWTService
+from sqlalchemy.exc import IntegrityError
+from starlette.testclient import TestClient
 
 JWT_SECRET = "test-jwt-secret-please-32-characters!!"
 

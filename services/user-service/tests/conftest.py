@@ -12,10 +12,9 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from starlette.testclient import TestClient
-
 from ford_shared.security.jwt import JWTService
 from ford_shared.security.rbac import Role
+from starlette.testclient import TestClient
 from user_service.dependencies import get_profile_service
 from user_service.main import app
 from user_service.models import UserProfile
