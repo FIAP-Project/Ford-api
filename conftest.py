@@ -24,3 +24,6 @@ os.environ.setdefault("AMQP_URL", "amqp://guest:guest@localhost:5672/")
 os.environ.setdefault("EVENT_SIGNING_SECRET", "test-signing-secret-please-32-chars!!")
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-please-32-characters!!")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key-not-called-in-tests")
+os.environ.setdefault(
+    "FIELD_ENCRYPTION_KEY", "f4pWifIuFZNPvTVlH8AJWOwvnwQNNreR_vo3u3bxMe8="
+)
