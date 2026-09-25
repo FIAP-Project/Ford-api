@@ -25,5 +25,9 @@ WORKDIR /app/services/vehicle-service
 COPY services/vehicle-service/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app \
+    && chown -R app:app /app
+USER app
+
 EXPOSE 8003
 ENTRYPOINT ["/entrypoint.sh"]

@@ -32,7 +32,11 @@ def include_object(obj, name, type_, reflected, compare_to):
 
 
 def do_run_migrations(connection: Connection) -> None:
-    connection.execute(sa.text(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"'))
+    # DB_SCHEMA is deploy-time/operator-controlled (env var), never request
+    # input; DDL identifiers can't be bound as params, so f-string is required here.
+    connection.execute(  # nosemgrep: avoid-sqlalchemy-text
+        sa.text(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"')
+    )
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
