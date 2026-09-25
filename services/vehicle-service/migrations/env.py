@@ -6,10 +6,9 @@ from logging.config import fileConfig
 
 import sqlalchemy as sa
 from alembic import context
+from ford_shared.db.base import Base
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from ford_shared.db.base import Base
 from vehicle_service.models import VehicleQuery, VehicleSpec  # noqa: F401
 
 config = context.config

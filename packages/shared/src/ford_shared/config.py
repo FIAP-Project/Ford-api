@@ -7,7 +7,8 @@ types and required fields. .env file loading is supported for local dev.
 
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Any
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -38,7 +39,7 @@ class BaseServiceSettings(BaseSettings):
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 7
 
-    cors_allowed_origins: Union[str, list[str]] = Field(
+    cors_allowed_origins: str | list[str] = Field(
         default_factory=lambda: ["https://localhost"]
     )
 

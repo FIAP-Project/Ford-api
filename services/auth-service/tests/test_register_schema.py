@@ -1,7 +1,6 @@
 import pytest
-from pydantic import ValidationError
-
 from auth_service.schemas import LoginRequest, RegisterRequest
+from pydantic import ValidationError
 
 
 def test_valid_register() -> None:

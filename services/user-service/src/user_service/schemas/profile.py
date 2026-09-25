@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
 from ford_shared.security.rbac import Role
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ProfileOut(BaseModel):

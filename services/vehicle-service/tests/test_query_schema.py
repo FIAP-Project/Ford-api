@@ -1,6 +1,5 @@
 import pytest
 from pydantic import ValidationError
-
 from vehicle_service.schemas import QueryRequest
 
 

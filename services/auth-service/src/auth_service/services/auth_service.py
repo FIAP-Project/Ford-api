@@ -6,10 +6,6 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from fastapi import HTTPException, status
-from sqlalchemy.exc import IntegrityError
-
-from auth_service.repositories import RefreshTokenRepository, UserRepository
-from auth_service.schemas import RegisterRequest, TokenPair, UserOut
 from ford_shared.events import (
     EventBus,
     EventType,
@@ -19,6 +15,10 @@ from ford_shared.events import (
 from ford_shared.events.schemas import AuthFailedEvent
 from ford_shared.security import Role, hash_password, verify_password
 from ford_shared.security.jwt import InvalidTokenError, JWTService
+from sqlalchemy.exc import IntegrityError
+
+from auth_service.repositories import RefreshTokenRepository, UserRepository
+from auth_service.schemas import RegisterRequest, TokenPair, UserOut
 
 
 class AuthService:

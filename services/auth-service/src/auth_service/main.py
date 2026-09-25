@@ -6,16 +6,16 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from ford_shared.app import apply_standard_middleware
+from ford_shared.db import Database
+from ford_shared.events import EventBus
+from ford_shared.security.jwt import JWTService
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from auth_service.config import get_settings
 from auth_service.controllers import auth_router, health_router
 from auth_service.controllers.auth_controller import limiter
-from ford_shared.app import apply_standard_middleware
-from ford_shared.db import Database
-from ford_shared.events import EventBus
-from ford_shared.security.jwt import JWTService
 
 logger = logging.getLogger(__name__)
 

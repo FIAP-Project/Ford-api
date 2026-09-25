@@ -7,6 +7,7 @@ from uuid import UUID
 
 from ford_shared.db import Database
 from ford_shared.events import EventBus, EventEnvelope, EventType
+
 from user_service.repositories import ProfileRepository
 
 logger = logging.getLogger(__name__)

@@ -6,11 +6,10 @@ from logging.config import fileConfig
 
 import sqlalchemy as sa
 from alembic import context
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
-
 from auth_service.models import RefreshToken, User  # noqa: F401
 from ford_shared.db.base import Base
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 config = context.config
 if config.config_file_name:

@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 from fastapi import Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from ford_shared.db import Database
 from ford_shared.events import EventBus
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from vehicle_service.repositories.query_repository import QueryRepository
 from vehicle_service.services.claude_client import ClaudeClient
 from vehicle_service.services.vehicle_service import VehicleService

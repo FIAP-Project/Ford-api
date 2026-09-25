@@ -4,14 +4,14 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
-from audit_service.config import get_settings
-from audit_service.controllers import audit_router, health_router
-from audit_service.events import start_consumers
 from ford_shared.app import apply_standard_middleware
 from ford_shared.db import Database
 from ford_shared.events import EventBus
 from ford_shared.security.jwt import JWTService
+
+from audit_service.config import get_settings
+from audit_service.controllers import audit_router, health_router
+from audit_service.events import start_consumers
 
 logger = logging.getLogger(__name__)
 

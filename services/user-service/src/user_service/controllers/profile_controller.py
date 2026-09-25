@@ -3,9 +3,9 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
-
 from ford_shared.security.dependencies import Principal, get_current_principal
 from ford_shared.security.rbac import Role, require_role
+
 from user_service.dependencies import get_profile_service
 from user_service.schemas import ProfileOut, ProfileUpdate
 from user_service.schemas.profile import RoleUpdate

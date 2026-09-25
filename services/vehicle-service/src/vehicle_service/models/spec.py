@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
+from ford_shared.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ford_shared.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+if TYPE_CHECKING:
+    from vehicle_service.models.query import VehicleQuery
 
 
 class VehicleSpec(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -25,6 +28,4 @@ class VehicleSpec(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     normalized_unit: Mapped[str | None] = mapped_column(String(40), nullable=True)
     source_hint: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
-    query: Mapped["VehicleQuery"] = relationship(  # type: ignore[name-defined]
-        "VehicleQuery", back_populates="specs"
-    )
+    query: Mapped[VehicleQuery] = relationship("VehicleQuery", back_populates="specs")

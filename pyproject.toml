@@ -22,10 +22,17 @@ ford-shared = { workspace = true }
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["**/migrations/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "N"]
-ignore = ["S101"]
+# S101: assert is expected in tests. B008: FastAPI's Depends()/Query() in
+# default args is the framework's documented pattern, not a real bug.
+ignore = ["S101", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures legitimately use literal passwords/secrets — not real creds.
+"**/tests/**" = ["S105", "S106"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
