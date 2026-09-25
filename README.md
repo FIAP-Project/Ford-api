@@ -489,7 +489,8 @@ Exemplo de linha de log (login falho):
 - [`docker-compose.yml`](docker-compose.yml) ganhou os serviços `prometheus` (porta 9090) e `grafana` (porta 3000), com Grafana já provisionado via arquivos versionados — sem clique manual:
   - [`infra/grafana/provisioning/datasources/prometheus.yml`](infra/grafana/provisioning/datasources/prometheus.yml) — datasource Prometheus.
   - [`infra/grafana/provisioning/dashboards/ford-api-overview.json`](infra/grafana/provisioning/dashboards/ford-api-overview.json) — dashboard "Ford-api Overview" (dashboard-as-code) com 6 painéis: taxa de requisições por serviço, taxa de erro 5xx, p95 de latência por serviço, tentativas de login falhas, p95 de latência do Claude, e falhas do Claude por motivo.
-- **Nota**: este ambiente sandbox não tem Docker disponível, então o dashboard não pôde ser executado e capturado aqui. Para gerar os prints exigidos pela entrega: `docker compose up -d --build`, aguardar os healthchecks, acessar `http://localhost:3000` (usuário/senha em `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` no `.env`) e abrir o dashboard "Ford-api Overview" já provisionado.
+
+ADD PRINT
 
 ### 16.5 Plano de resposta a incidentes
 
