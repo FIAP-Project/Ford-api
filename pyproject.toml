@@ -35,6 +35,8 @@ ignore = ["S101", "B008"]
 [tool.ruff.lint.per-file-ignores]
 # Test fixtures legitimately use literal passwords/secrets — not real creds.
 "**/tests/**" = ["S105", "S106"]
+# Long nosemgrep suppression comment with the full canonical rule ID.
+"**/migrations/env.py" = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
