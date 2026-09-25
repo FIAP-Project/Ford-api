@@ -82,11 +82,16 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --all-packages
 
+      - name: Export third-party requirements
+        run: |
+          uv export --frozen --all-packages --no-emit-workspace \
+            --format requirements-txt > requirements-audit.txt
+
       - name: Install pip-audit
         run: uv pip install pip-audit
 
       - name: Audit resolved dependencies for known CVEs
-        run: uv run pip-audit --strict --skip-editable --progress-spinner=off
+        run: uv run pip-audit --strict --progress-spinner=off -r requirements-audit.txt
 
   # ---------------------------------------------------------------------
   # Stage 4 — Secret scanning: fail the build if a credential was committed
