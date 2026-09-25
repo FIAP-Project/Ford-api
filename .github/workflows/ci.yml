@@ -91,7 +91,15 @@ jobs:
         run: uv pip install pip-audit
 
       - name: Audit resolved dependencies for known CVEs
-        run: uv run pip-audit --strict --progress-spinner=off -r requirements-audit.txt
+        # PYSEC-2026-1325 (ecdsa Minerva timing attack, CVE-2024-23342): ecdsa is a
+        # transitive dependency of python-jose, which we install with the
+        # [cryptography] extra, so the actual JWT signing/verification path uses the
+        # cryptography backend, not pure-python ecdsa. Upstream has no planned fix
+        # (side-channel attacks are explicitly out of scope for python-ecdsa).
+        run: |
+          uv run pip-audit --strict --progress-spinner=off \
+            --ignore-vuln PYSEC-2026-1325 \
+            -r requirements-audit.txt
 
   # ---------------------------------------------------------------------
   # Stage 4 — Secret scanning: fail the build if a credential was committed
