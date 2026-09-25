@@ -490,7 +490,7 @@ Exemplo de linha de log (login falho):
   - [`infra/grafana/provisioning/datasources/prometheus.yml`](infra/grafana/provisioning/datasources/prometheus.yml) — datasource Prometheus.
   - [`infra/grafana/provisioning/dashboards/ford-api-overview.json`](infra/grafana/provisioning/dashboards/ford-api-overview.json) — dashboard "Ford-api Overview" (dashboard-as-code) com 6 painéis: taxa de requisições por serviço, taxa de erro 5xx, p95 de latência por serviço, tentativas de login falhas, p95 de latência do Claude, e falhas do Claude por motivo.
 
-ADD PRINT
+<img width="1535" height="844" alt="image" src="https://github.com/user-attachments/assets/2cc02a19-d1c2-45f6-a76e-4965b12defee" />
 
 ### 16.5 Plano de resposta a incidentes
 
