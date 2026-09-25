@@ -42,7 +42,9 @@ async def query_vehicle(
     response_model=list[QuerySummary],
     summary="List previous queries (user: own; analyst+: all)",
 )
+@limiter.limit("30/minute")
 async def list_queries(
+    request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     principal: Principal = Depends(get_current_principal),
@@ -62,7 +64,9 @@ async def list_queries(
     response_model=QueryResponse,
     summary="Get a specific query by id",
 )
+@limiter.limit("60/minute")
 async def get_query(
+    request: Request,
     query_id: UUID,
     principal: Principal = Depends(get_current_principal),
     service: VehicleService = Depends(get_vehicle_service),

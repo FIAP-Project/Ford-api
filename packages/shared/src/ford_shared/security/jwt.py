@@ -10,6 +10,9 @@ from pydantic import BaseModel, ConfigDict
 
 from ford_shared.security.rbac import Role
 
+ISSUER = "ford-auth-service"
+AUDIENCE = "ford-api"
+
 
 class TokenPayload(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -20,6 +23,8 @@ class TokenPayload(BaseModel):
     iat: int
     exp: int
     jti: str
+    iss: str
+    aud: str
     token_type: str = "access"  # noqa: S105 -- token kind label, not a secret
 
 
@@ -65,6 +70,8 @@ class JWTService:
             "iat": int(now.timestamp()),
             "exp": int((now + ttl).timestamp()),
             "jti": jti,
+            "iss": ISSUER,
+            "aud": AUDIENCE,
             "token_type": token_type,
         }
         token = jwt.encode(payload, self._secret, algorithm=self._alg)
@@ -72,7 +79,13 @@ class JWTService:
 
     def decode(self, token: str, *, expected_type: str = "access") -> TokenPayload:
         try:
-            raw = jwt.decode(token, self._secret, algorithms=[self._alg])
+            raw = jwt.decode(
+                token,
+                self._secret,
+                algorithms=[self._alg],
+                issuer=ISSUER,
+                audience=AUDIENCE,
+            )
         except JWTError as exc:
             raise InvalidTokenError("Invalid or expired token") from exc
 
