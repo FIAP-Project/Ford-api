@@ -299,7 +299,55 @@ A resposta deve trazer todas as 14 specs com valores correspondentes ao slide.
 
 ---
 
-## 11. Roadmap de testes manuais
+## 11. Testes automatizados (SOA)
+
+Cada serviço tem uma suíte de testes de integração HTTP que exercita a app FastAPI real
+(roteamento, RBAC, JWT, middlewares) contra o `TestClient` do Starlette. A camada de
+repositório/DB é substituída por fakes em memória via `app.dependency_overrides`, então os
+testes rodam sem Postgres, RabbitMQ ou a API da Anthropic — só precisam do `.venv` do `uv`.
+
+### Como rodar
+
+```bash
+uv sync   # ou: uv sync --frozen, se já tiver rodado antes
+
+# suíte inteira (packages + todos os serviços)
+uv run pytest
+
+# só um serviço
+uv run pytest services/auth-service/tests
+uv run pytest services/user-service/tests
+uv run pytest services/vehicle-service/tests
+uv run pytest services/audit-service/tests
+
+# um teste específico, com saída detalhada
+uv run pytest services/vehicle-service/tests/test_vehicle_api.py::test_query_upstream_failure_returns_502 -v
+```
+
+### Cobertura por serviço
+
+| Serviço | Casos cobertos |
+|---|---|
+| **auth-service** | Registro (sucesso/duplicado 409/senha fraca 422/campo desconhecido 422), login (sucesso/senha errada 401/email desconhecido 401), refresh (rotação/token revogado 401/token inválido 401), `GET /auth/me` (sem token 401/com token 200/token malformado 401), health público |
+| **user-service** | `GET /users/me` (sem token 401/sem perfil 404/perfil existente 200), `PATCH /users/me`, listagem restrita a analyst+ (403 para user comum), `PUT /users/{id}/role` restrito a admin (403/404/422), health público |
+| **vehicle-service** | `POST /vehicles/query` (sucesso/falha do Claude → 502/payload inválido 422/campo desconhecido 422/sem token 401), `GET /vehicles/queries` (user vê só as próprias, analyst vê todas), `GET /vehicles/queries/{id}` (403 ao ver query de outro usuário, 404 para id inexistente, analyst vê qualquer uma), health público |
+| **audit-service** | `GET /audit/events` restrito a admin (401 sem token, 403 para não-admin), listagem com eventos seedados, filtros por `event_type` e `actor_user_id`, health público |
+
+### Evidência de execução
+
+```
+$ uv run pytest packages services -q
+........................................................................ [ 92%]
+......                                                                   [100%]
+======================== 78 passed, 6 warnings in 4.09s ========================
+```
+
+Os 6 warnings são deprecations internas do Starlette (`HTTP_422_UNPROCESSABLE_ENTITY`),
+não relacionadas ao código do projeto.
+
+---
+
+## 12. Roadmap de testes manuais
 
 | Caso | Como reproduzir | Esperado |
 |---|---|---|
@@ -314,7 +362,7 @@ A resposta deve trazer todas as 14 specs com valores correspondentes ao slide.
 
 ---
 
-## 12. Dev local (sem Docker)
+## 13. Dev local (sem Docker)
 
 ```bash
 uv sync
@@ -327,7 +375,7 @@ Repita o padrão para os outros serviços. Postgres/RabbitMQ podem rodar via `do
 
 ---
 
-## 13. Tecnologias
+## 14. Tecnologias
 
 | Camada | Lib / Versão |
 |---|---|
