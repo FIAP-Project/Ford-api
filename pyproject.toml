@@ -21,6 +21,10 @@ members = ["packages/*", "services/*"]
 [tool.uv.sources]
 ford-shared = { workspace = true }
 
+[tool.uv]
+# Transitive via fastapi (all services); floor set to close CVE-2026-2280/2281/248.
+constraint-dependencies = ["starlette>=1.1.0"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
