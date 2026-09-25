@@ -18,7 +18,7 @@ RUN python -m pip uninstall -y pip
 WORKDIR /app
 
 # Copy workspace manifests first for layer caching.
-COPY pyproject.toml /app/pyproject.toml
+COPY pyproject.toml uv.lock /app/
 COPY packages/shared/pyproject.toml /app/packages/shared/pyproject.toml
 COPY services/auth-service/pyproject.toml /app/services/auth-service/pyproject.toml
 
@@ -26,7 +26,7 @@ COPY services/auth-service/pyproject.toml /app/services/auth-service/pyproject.t
 COPY packages/shared /app/packages/shared
 COPY services/auth-service /app/services/auth-service
 
-RUN uv sync --frozen --package auth-service || uv sync --package auth-service
+RUN uv sync --frozen --package auth-service
 
 ENV PATH="/app/.venv/bin:${PATH}"
 

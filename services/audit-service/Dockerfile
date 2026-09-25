@@ -15,13 +15,13 @@ COPY --from=ghcr.io/astral-sh/uv:0.4 /uv /usr/local/bin/uv
 RUN python -m pip uninstall -y pip
 
 WORKDIR /app
-COPY pyproject.toml /app/pyproject.toml
+COPY pyproject.toml uv.lock /app/
 COPY packages/shared/pyproject.toml /app/packages/shared/pyproject.toml
 COPY services/audit-service/pyproject.toml /app/services/audit-service/pyproject.toml
 COPY packages/shared /app/packages/shared
 COPY services/audit-service /app/services/audit-service
 
-RUN uv sync --frozen --package audit-service || uv sync --package audit-service
+RUN uv sync --frozen --package audit-service
 
 ENV PATH="/app/.venv/bin:${PATH}"
 

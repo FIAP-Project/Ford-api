@@ -177,6 +177,10 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
+          # Vulnerabilities only: secrets in source are already covered by the
+          # dedicated Gitleaks job, and image-level secret scanning here mostly
+          # flags false positives from vendored third-party package docstrings.
+          scanners: vuln
 
       - name: Upload Trivy SARIF to code scanning
         if: always()

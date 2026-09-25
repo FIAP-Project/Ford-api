@@ -15,13 +15,13 @@ COPY --from=ghcr.io/astral-sh/uv:0.4 /uv /usr/local/bin/uv
 RUN python -m pip uninstall -y pip
 
 WORKDIR /app
-COPY pyproject.toml /app/pyproject.toml
+COPY pyproject.toml uv.lock /app/
 COPY packages/shared/pyproject.toml /app/packages/shared/pyproject.toml
 COPY services/vehicle-service/pyproject.toml /app/services/vehicle-service/pyproject.toml
 COPY packages/shared /app/packages/shared
 COPY services/vehicle-service /app/services/vehicle-service
 
-RUN uv sync --frozen --package vehicle-service || uv sync --package vehicle-service
+RUN uv sync --frozen --package vehicle-service
 
 ENV PATH="/app/.venv/bin:${PATH}"
 
