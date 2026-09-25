@@ -22,6 +22,11 @@ members = ["packages/*", "services/*"]
 ford-shared = { workspace = true }
 
 [tool.uv]
+# Dependency cooldown: only resolve package versions published before this
+# date, to reduce exposure to compromised/malicious releases right after
+# publication. CI is pinned to uv 0.4.30, which predates the relative
+# duration syntax (uv>=0.9.17), so this uses an absolute timestamp instead.
+exclude-newer = "2026-09-18T00:00:00Z"
 # Transitive via fastapi (all services); floor set to close CVE-2026-2280/2281/248.
 constraint-dependencies = ["starlette>=1.1.0"]
 
