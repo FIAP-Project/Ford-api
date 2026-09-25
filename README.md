@@ -551,3 +551,55 @@ Exemplo de linha de log (login falho):
 | **Recuperação** | Voltar ao estado normal monitorando os mesmos painéis/alertas que detectaram o incidente, confirmando que as métricas retornaram à baseline antes de considerar o incidente encerrado | Grafana/Prometheus |
 
 Esse fluxo é possível porque as três pernas de observabilidade construídas neste item se complementam: **logs estruturados** dão o "o que aconteceu, request a request", **eventos auditáveis assinados** dão o "quem fez o quê, de forma imutável", e **métricas/alertas** dão o "quando algo saiu do normal, antes que alguém precise procurar manualmente".
+
+---
+
+## 17. Sprint 3 — Cybersecurity: Compliance, Riscos e Segurança Contínua (C4)
+
+Objetivo: demonstrar que o sistema segue boas práticas, normas e políticas de segurança — revisão final dos riscos, mapeamento contra normas reconhecidas e um plano de segurança contínua (não apenas "no dia do commit").
+
+### 17.1 Revisão final de riscos (STRIDE + DevSecOps)
+
+| Categoria STRIDE | Ameaça no Ford-api | Mitigação | Onde |
+|---|---|---|---|
+| **S**poofing | Forjar identidade de outro usuário/serviço | JWT assinado (HS256) validado em toda rota protegida; eventos inter-serviço carregam HMAC (`x-signature`) — um serviço não aceita mensagem de origem não autenticada | §5, `ford_shared.security.jwt`, `EventBus._dispatch` |
+| **T**ampering | Alterar dados em trânsito ou em repouso | TLS 1.2+/HSTS no Nginx; `full_name` cifrado em repouso (Fernet) antes de tocar o Postgres; migrations com schema por serviço (isolamento) | §15 (C2), `FieldCipher` |
+| **R**epudiation | Usuário negar ter feito uma ação sensível (ex.: trocar o próprio papel) | Toda ação crítica (registro, login, falha de login, troca de papel) vira evento assinado e imutável no `audit-service`, correlacionável por `request_id` nos logs estruturados | §16 (C3) |
+| **I**nformation disclosure | Vazar dado sensível via erro, log ou payload | `register_exception_handlers` nunca expõe stack trace ao cliente; `full_name` cifrado; CORS com whitelist; `CSP default-src 'none'` bloqueia carregamento de conteúdo externo em respostas | §5 |
+| **D**enial of service | Sobrecarregar um endpoint (ex.: `/auth/login`, `/vehicles/query`) | Rate limiting em duas camadas: Nginx (`limit_req_zone`) + `slowapi` por rota, incluindo as rotas de `vehicle-service` corrigidas no C2 (`list_queries`, `get_query`) | §5, §15 (C2) |
+| **E**levation of privilege | Usuário comum forjar/escalar para `admin` | RBAC hierárquico (`require_role`) validado no `auth-service` e reforçado no `user-service`; troca de papel exige o próprio papel `admin` e agora gera evento auditável, fechando o loop de rastreabilidade | §5, §16 (C3) |
+
+**Risco residual conhecido**: não há rotação automática de segredos (`JWT_SECRET`, `EVENT_SIGNING_SECRET`, `FIELD_ENCRYPTION_KEY`) nem KMS/HSM — hoje eles vivem em `.env`. Aceito para o escopo do desafio; documentado aqui em vez de ignorado.
+
+### 17.2 Mapeamento com normas e boas práticas
+
+| Norma | Aplicabilidade | Como o Ford-api atende (ou por que não se aplica) |
+|---|---|---|
+| **OWASP ASVS** | Aplica-se (é uma API + serviços backend) | V2 (auth): JWT + hash de senha com `bcrypt`/`passlib`. V4 (access control): RBAC hierárquico. V5 (validação): Pydantic em 100% dos schemas de entrada. V7 (erros/logging): handler central sem vazamento + logs estruturados (§16). V9 (comunicação): TLS 1.2+/HSTS. V12 (arquivos): não aplicável — o sistema não recebe upload de arquivos |
+| **OWASP Mobile Top 10** | **Não se aplica** — o Ford-api não tem app mobile nativo; o "cliente" é o Nginx/HTTPS consumido por qualquer HTTP client | Não adaptado artificialmente para evitar afirmação falsa de cobertura |
+| **OWASP API Top 10** | Aplica-se diretamente | API1 (BOLA): todo recurso é filtrado pelo `user_id`/`auth_user_id` do JWT, nunca por ID solto na URL sem checagem de posse. API2 (broken auth): JWT + refresh rotativo revogável. API4 (resource consumption): rate limiting (§5) + `client_max_body_size`. API5 (BFLA): `require_role` por rota. API8 (security misconfig): `HEALTHCHECK` + headers de segurança + CORS restrito (§15) |
+| **LGPD** | Aplica-se — `full_name`, `email` são dados pessoais | Minimização: só se coleta o necessário para autenticação/perfil. Cifra em repouso para `full_name` (dado pessoal mais sensível do schema). Direito de retificação: `PATCH /users/me` permite o titular corrigir o próprio nome. Não há coleta de telemetria/geolocalização — o Ford-api não tem componente IoT/dispositivo, logo esse subitem da LGPD citado no rubric não se aplica |
+
+### 17.3 Plano de segurança contínua
+
+| Rotina | Frequência | Implementação |
+|---|---|---|
+| **Revisão de dependências** | A cada push/PR **e** semanalmente, mesmo sem código novo | `SCA (pip-audit)` já rodava por PR (C1); adicionado `schedule: cron: "0 6 * * 1"` em [`.github/workflows/ci.yml`](.github/workflows/ci.yml) para pegar CVEs publicados depois do último merge. Dependabot do GitHub também está ativo no repositório (alertas visíveis na aba Security) |
+| **Testes de segurança** | A cada push/PR **e** semanalmente | Mesmo gatilho `schedule` acima também dispara `SAST (Semgrep)`, `Secret scan (Gitleaks)` e a suíte de testes (`Tests (pytest)`, 78 testes) contra o `master` atual, não só contra diffs |
+| **Auditoria de permissões** | Trimestral (manual, checklist) | Não há automação de auditoria de RBAC neste escopo — o processo recomendado é: `SELECT auth_user_id, role FROM users.user_profiles` via `audit-service`/DB direto, revisar quem tem `admin`/`analyst` e confirmar que cada um ainda deveria ter. Toda troca de papel feita pelo processo já fica registrada em `audit-service` (§16.2), então a auditoria tem trilha para conferir contra a lista atual |
+| **Backup e recuperação** | Diária (backup); sob demanda (restore) | [`infra/postgres/backup.sh`](infra/postgres/backup.sh) — `pg_dump --format=custom` de dentro do container via `docker compose exec`, salvo timestamped em `backups/` (fora do controle de versão). [`infra/postgres/restore.sh`](infra/postgres/restore.sh) — restaura um dump para o container em execução (`pg_restore --clean --if-exists`). Ambos consomem o `.env` já existente, sem segredo novo |
+
+### 17.4 Checklist de conformidade
+
+| Item | Status |
+|---|---|
+| Revisão STRIDE final documentada | ✅ §17.1 |
+| Mapeamento OWASP ASVS | ✅ §17.2 |
+| Mapeamento OWASP Mobile Top 10 | N/A — sem app mobile (justificado, não ignorado) |
+| Mapeamento OWASP API Top 10 | ✅ §17.2 |
+| Mapeamento LGPD | ✅ §17.2 (telemetria/localização N/A — sem IoT) |
+| Rotina de revisão de dependências | ✅ CI por PR + cron semanal |
+| Rotina de testes de segurança | ✅ CI por PR + cron semanal |
+| Rotina de auditoria de permissões | ✅ processo documentado (manual, trimestral) — sem automação neste escopo |
+| Rotina de backup e recuperação | ✅ `infra/postgres/backup.sh` + `restore.sh` |
+| Documento final consolidado | ✅ este README (§1–§17) |
