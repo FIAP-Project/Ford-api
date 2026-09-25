@@ -9,6 +9,7 @@ live Postgres.
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -21,6 +22,16 @@ from user_service.models import UserProfile
 from user_service.services import ProfileService
 
 JWT_SECRET = "test-jwt-secret-please-32-characters!!"
+
+
+class FakeCipher:
+    """Identity encrypt/decrypt: tests seed and assert plaintext directly."""
+
+    def encrypt(self, value: str | None) -> str | None:
+        return value
+
+    def decrypt(self, value: str | None) -> str | None:
+        return value
 
 
 class FakeProfileRepository:
@@ -82,7 +93,7 @@ def client(profile_repo, jwt_service):
     app.state.jwt_service = jwt_service
 
     def _override_profile_service() -> ProfileService:
-        return ProfileService(profile_repo)
+        return ProfileService(profile_repo, FakeCipher(), AsyncMock())
 
     app.dependency_overrides[get_profile_service] = _override_profile_service
     try:
