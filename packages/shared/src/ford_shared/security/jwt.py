@@ -20,7 +20,7 @@ class TokenPayload(BaseModel):
     iat: int
     exp: int
     jti: str
-    token_type: str = "access"
+    token_type: str = "access"  # noqa: S105 -- token kind label, not a secret
 
 
 class InvalidTokenError(Exception):

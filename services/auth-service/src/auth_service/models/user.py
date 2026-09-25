@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+from ford_shared.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column
-
-from ford_shared.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):

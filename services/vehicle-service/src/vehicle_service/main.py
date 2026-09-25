@@ -4,13 +4,13 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-
 from ford_shared.app import apply_standard_middleware
 from ford_shared.db import Database
 from ford_shared.events import EventBus
 from ford_shared.security.jwt import JWTService
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 from vehicle_service.config import get_settings
 from vehicle_service.controllers import health_router, vehicle_router
 from vehicle_service.controllers.vehicle_controller import limiter

@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 from fastapi import Depends, Request
+from ford_shared.db import Database
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ford_shared.db import Database
 from user_service.repositories import ProfileRepository
 from user_service.services import ProfileService
 

@@ -10,20 +10,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:0.4 /uv /usr/local/bin/uv
 
+RUN python -m pip uninstall -y pip
+
 WORKDIR /app
-COPY pyproject.toml /app/pyproject.toml
+COPY pyproject.toml uv.lock /app/
 COPY packages/shared/pyproject.toml /app/packages/shared/pyproject.toml
 COPY services/audit-service/pyproject.toml /app/services/audit-service/pyproject.toml
 COPY packages/shared /app/packages/shared
 COPY services/audit-service /app/services/audit-service
 
-RUN uv sync --frozen --package audit-service || uv sync --package audit-service
+RUN uv sync --frozen --package audit-service
 
 ENV PATH="/app/.venv/bin:${PATH}"
 
 WORKDIR /app/services/audit-service
 COPY services/audit-service/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app \
+    && chown -R app:app /app
+USER app
 
 EXPOSE 8004
 ENTRYPOINT ["/entrypoint.sh"]

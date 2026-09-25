@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
-
 from ford_shared.config import BaseServiceSettings
+from pydantic import Field
 
 
 class Settings(BaseServiceSettings):

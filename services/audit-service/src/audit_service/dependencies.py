@@ -3,11 +3,11 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 from fastapi import Depends, Request
+from ford_shared.db import Database
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_service.repositories import EventRepository
 from audit_service.services import AuditService
-from ford_shared.db import Database
 
 
 async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
