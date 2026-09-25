@@ -5,6 +5,12 @@ on:
     branches: ["**"]
   pull_request:
     branches: [master]
+  schedule:
+    # Rotina semanal de revisão de dependências e testes de segurança,
+    # independente de haver PR aberto: pega CVEs publicados depois do
+    # último merge (SCA), drift de secrets (Gitleaks) e regressões de
+    # SAST (Semgrep) contra o código atual de master.
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
