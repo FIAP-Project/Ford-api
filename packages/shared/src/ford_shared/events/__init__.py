@@ -2,6 +2,7 @@ from ford_shared.events.bus import EventBus, EventEnvelope, EventHandler
 from ford_shared.events.schemas import (
     AuthFailedEvent,
     EventType,
+    RoleChangedEvent,
     UserLoggedInEvent,
     UserRegisteredEvent,
     VehicleQueryCompletedEvent,
@@ -14,6 +15,7 @@ __all__ = [
     "EventEnvelope",
     "EventHandler",
     "EventType",
+    "RoleChangedEvent",
     "UserLoggedInEvent",
     "UserRegisteredEvent",
     "VehicleQueryCompletedEvent",

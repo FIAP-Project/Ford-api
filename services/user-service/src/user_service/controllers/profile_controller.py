@@ -73,7 +73,7 @@ async def update_role(
     request: Request,
     user_id: UUID,
     payload: RoleUpdate,
-    _: Principal = Depends(require_role(Role.ADMIN)),
+    admin: Principal = Depends(require_role(Role.ADMIN)),
     service: ProfileService = Depends(get_profile_service),
 ) -> ProfileOut:
-    return await service.update_role(user_id, payload.role.value)
+    return await service.update_role(user_id, payload.role.value, actor_user_id=admin.user_id)

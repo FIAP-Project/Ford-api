@@ -14,6 +14,7 @@ dependencies = [
     "bcrypt>=4.0",
     "fastapi>=0.111",
     "structlog>=24.1",
+    "prometheus-client>=0.20",
 ]
 
 [build-system]

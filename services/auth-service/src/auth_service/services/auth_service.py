@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -19,6 +20,8 @@ from sqlalchemy.exc import IntegrityError
 
 from auth_service.repositories import RefreshTokenRepository, UserRepository
 from auth_service.schemas import RegisterRequest, TokenPair, UserOut
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -69,6 +72,7 @@ class AuthService:
     async def login(self, email: str, password: str) -> TokenPair:
         user = await self._users.get_by_email(email.lower())
         if user is None or not verify_password(password, user.password_hash):
+            logger.warning("auth.login_failed", extra={"email": email})
             await self._publish_auth_failed(email, "invalid_credentials")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -98,6 +102,7 @@ class AuthService:
                 email=user.email,
             ).model_dump(),
         )
+        logger.info("auth.login_succeeded", extra={"user_id": str(user.id)})
 
         return TokenPair(
             access_token=access,

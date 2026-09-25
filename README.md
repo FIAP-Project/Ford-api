@@ -445,3 +445,61 @@ Nenhuma escalação de privilégio ou bypass de propriedade foi encontrada; o tr
 - **Dockerfiles** (`auth-service`, `user-service`, `vehicle-service`, `audit-service`): adicionado `HEALTHCHECK` apontando para o endpoint de liveness de cada serviço (`/auth/health`, `/users/health`, `/vehicles/health`, `/audit/health`), usando `urllib` da stdlib — evita instalar `curl` na imagem só para o probe.
 - **[`docker-compose.yml`](docker-compose.yml)**: Postgres, RabbitMQ e Redis passaram de `ports:` (publicados no host) para `expose:` (visíveis só na rede interna do Compose) — mesma postura que os 4 serviços de aplicação já seguiam. Reduz a superfície de ataque em ambientes onde o host tem outras interfaces de rede expostas.
 - Segurança MQTT/TLS para IoT não se aplica: o Ford-api não tem nenhum componente de telemetria de dispositivo/IoT.
+
+---
+
+## 16. Sprint 3 — Cybersecurity: Observabilidade, Monitoramento e Resposta (C3)
+
+Objetivo: mostrar como o sistema detecta, registra e responde a incidentes. O rubric original cita métricas "API, mobile, IoT, ML" — o Ford-api não tem app mobile nem componente IoT; o item foi adaptado para API (os 4 serviços HTTP) e para a chamada à API do Claude em `vehicle-service` (o único componente de IA/ML do projeto).
+
+### 16.1 Logs estruturados
+
+Todo `logging.getLogger(__name__)` já existente no código (controllers, event bus, consumers, error handlers) agora é renderizado como uma única linha JSON, sem precisar tocar em nenhum call site:
+
+- [`packages/shared/src/ford_shared/observability/logging.py`](packages/shared/src/ford_shared/observability/logging.py) — `configure_logging()` usa `structlog.stdlib.ProcessorFormatter` para envolver o `logging` padrão do stdlib; `extra={...}` passado a qualquer `logger.info/warning/exception` (ex.: `request_id`, `event_type`) é automaticamente mesclado no JSON de saída.
+- Chamado uma vez por serviço em cada `main.py`, substituindo o antigo `logging.basicConfig(level=...)` — `structlog` já era uma dependência declarada mas nunca tinha sido configurada.
+- Login e alteração crítica agora geram log explícito, além do evento de domínio já existente:
+  - [`services/auth-service/src/auth_service/services/auth_service.py`](services/auth-service/src/auth_service/services/auth_service.py) — `auth.login_failed` (warning) e `auth.login_succeeded` (info).
+  - [`services/user-service/src/user_service/services/profile_service.py`](services/user-service/src/user_service/services/profile_service.py) — `user.role_changed` (warning), com `actor_user_id`, `previous_role` e `new_role`.
+
+Exemplo de linha de log (login falho):
+
+```json
+{"event": "auth.login_failed", "email": "user@example.com", "level": "warning", "logger": "auth_service.services.auth_service", "service": "auth-service", "timestamp": "2026-09-25T14:02:11.093Z"}
+```
+
+### 16.2 Alterações críticas viram evento auditável
+
+`user-service`'s `PUT /{user_id}/role` (troca de papel — a superfície de escalação de privilégio mais sensível do sistema) não publicava nenhum evento antes deste trabalho, ao contrário de registro/login/falha de login, que já eram capturados. Adicionado:
+
+- `EventType.ROLE_CHANGED` (`user.role_changed`) em [`packages/shared/src/ford_shared/events/schemas.py`](packages/shared/src/ford_shared/events/schemas.py), com `actor_user_id`, `user_id`, `previous_role`, `new_role`.
+- `ProfileService.update_role()` agora publica esse evento — capturado automaticamente pelo consumer wildcard (`#`) do `audit-service`, o mesmo pipeline que já persiste `user.registered`, `user.logged_in` e `auth.failed` de forma assinada (HMAC) e imutável.
+
+### 16.3 Métricas e alertas
+
+| O quê | Onde | Detalhe |
+|---|---|---|
+| Métricas HTTP (contagem, latência, status) | [`packages/shared/src/ford_shared/observability/metrics.py`](packages/shared/src/ford_shared/observability/metrics.py) — `instrument_app()`, chamado por `apply_standard_middleware()` nos 4 serviços | `http_requests_total{service,method,path,status}` e `http_request_duration_seconds{service,method,path}`, expostos em `GET /metrics` (Prometheus text format) |
+| Métricas da chamada de IA (Claude) | [`services/vehicle-service/src/vehicle_service/services/claude_client.py`](services/vehicle-service/src/vehicle_service/services/claude_client.py) | `claude_request_duration_seconds` (histograma) e `claude_request_failures_total{reason}` — cobre o item "ML" do rubric adaptado ao único uso de IA do projeto |
+| Scrape config | [`infra/prometheus/prometheus.yml`](infra/prometheus/prometheus.yml) | Prometheus faz scrape dos 4 `/metrics` a cada 15s |
+| Regras de alerta | [`infra/prometheus/alerts.yml`](infra/prometheus/alerts.yml) | `HighHttp5xxRate` (>5% de 5xx em 5 min), `HighRequestLatencyP95` (p95 > 2s), `AuthFailedSpike` (possível brute-force/credential stuffing em `/auth/login`), `ClaudeApiFailureSpike` (degradação do provedor de IA) |
+
+### 16.4 Dashboards
+
+- [`docker-compose.yml`](docker-compose.yml) ganhou os serviços `prometheus` (porta 9090) e `grafana` (porta 3000), com Grafana já provisionado via arquivos versionados — sem clique manual:
+  - [`infra/grafana/provisioning/datasources/prometheus.yml`](infra/grafana/provisioning/datasources/prometheus.yml) — datasource Prometheus.
+  - [`infra/grafana/provisioning/dashboards/ford-api-overview.json`](infra/grafana/provisioning/dashboards/ford-api-overview.json) — dashboard "Ford-api Overview" (dashboard-as-code) com 6 painéis: taxa de requisições por serviço, taxa de erro 5xx, p95 de latência por serviço, tentativas de login falhas, p95 de latência do Claude, e falhas do Claude por motivo.
+
+ADD PRINT
+
+### 16.5 Plano de resposta a incidentes
+
+| Fase | O que significa no Ford-api | Ferramenta/evidência |
+|---|---|---|
+| **Detecção** | Alerta do Prometheus dispara (ex.: `AuthFailedSpike`, `HighHttp5xxRate`) ou um SOC/dev nota anomalia num painel do Grafana | `infra/prometheus/alerts.yml`, dashboard §16.4 |
+| **Análise** | Correlacionar o `request_id` do log estruturado (JSON, §16.1) com o evento de domínio persistido no `audit-service` (assinado com HMAC, imutável) para reconstruir a sequência exata de ações do ator suspeito | Logs JSON + `GET /audit/events` |
+| **Contenção** | Revogar tokens de refresh do usuário afetado (`refresh_tokens` já são individualmente revogáveis via `RefreshTokenRepository.revoke()`); se for um `admin` comprometido, rebaixar o papel via `PUT /{user_id}/role` — essa própria ação agora gera um evento `user.role_changed` auditável (§16.2), fechando o loop | `auth-service`, `user-service` |
+| **Erradicação** | Girar os segredos comprometidos (`JWT_SECRET`, `EVENT_SIGNING_SECRET`, `FIELD_ENCRYPTION_KEY`) e forçar reautenticação de todos os usuários invalidando todos os refresh tokens ativos | `.env` + restart dos serviços |
+| **Recuperação** | Voltar ao estado normal monitorando os mesmos painéis/alertas que detectaram o incidente, confirmando que as métricas retornaram à baseline antes de considerar o incidente encerrado | Grafana/Prometheus |
+
+Esse fluxo é possível porque as três pernas de observabilidade construídas neste item se complementam: **logs estruturados** dão o "o que aconteceu, request a request", **eventos auditáveis assinados** dão o "quem fez o quê, de forma imutável", e **métricas/alertas** dão o "quando algo saiu do normal, antes que alguém precise procurar manualmente".
