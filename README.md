@@ -387,11 +387,11 @@ Repita o padrão para os outros serviços. Postgres/RabbitMQ podem rodar via `do
 
 ---
 
-## 14. Sprint 3 — Cybersecurity: Pipeline DevSecOps (C1)
+## 15. Sprint 3 — Cybersecurity: Pipeline DevSecOps (C1)
 
 Objetivo: mostrar como a segurança é incorporada ao ciclo de desenvolvimento — do commit ao deploy — em vez de ficar restrita a um documento. O pipeline vive em [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (GitHub Actions) e roda em todo `push` e em toda Pull Request contra `master`.
 
-### 14.1 Diagrama do pipeline
+### 15.1 Diagrama do pipeline
 
 ```mermaid
 flowchart TD
@@ -426,7 +426,7 @@ flowchart TD
     Build --> Done["Imagens prontas para push/deploy"]
 ```
 
-### 14.2 O que cada etapa reduz de risco
+### 15.2 O que cada etapa reduz de risco
 
 | Etapa | Ferramenta | O que pega | Por que bloqueia o merge |
 |---|---|---|---|
@@ -437,7 +437,7 @@ flowchart TD
 | **Tests** | pytest (packages + services) | Regressões funcionais — só roda depois que os 3 scans de segurança passam, para não gastar tempo de CI testando código já reprovado | Gate de qualidade antes do build de imagem |
 | **Build & scan** | Docker Buildx + Trivy (`scanners: vuln`) | CVEs na imagem final (SO + runtime), incluindo a camada base `python:3.12-slim` | Cada serviço builda e escaneia isoladamente (matrix `fail-fast: false`), então um serviço vulnerável não mascara os outros 3 |
 
-### 14.3 Como isso rodaria no projeto Ford
+### 15.3 Como isso rodaria no projeto Ford
 
 1. Um dev abre PR contra `master` → todo o pipeline acima dispara automaticamente.
 2. `needs: lint` garante que SAST/SCA/secret-scan só rodam em código que já passou no lint básico — evita gastar minutos de Actions em algo que ia falhar de qualquer forma.
@@ -449,11 +449,11 @@ flowchart TD
 
 ---
 
-## 15. Sprint 3 — Cybersecurity: Segurança em Código e Infraestrutura (C2)
+## 16. Sprint 3 — Cybersecurity: Segurança em Código e Infraestrutura (C2)
 
 Objetivo: aplicar controles concretos de segurança no código e na infraestrutura do Ford-api. O rubric original cita papéis genéricos ("Brigadista, Gestor, Administrador") e segurança MQTT/TLS para IoT — nenhum dos dois existe no domínio do Ford-api (que tem os papéis `user`/`analyst`/`admin` e nenhum componente IoT), então os controles abaixo foram adaptados para o domínio real do projeto: `auth-service`, `user-service`, `vehicle-service` e `audit-service`.
 
-### 15.1 Criptografia local (dados em repouso)
+### 16.1 Criptografia local (dados em repouso)
 
 PII (`full_name` do perfil de usuário) é criptografada com Fernet (AES-128-CBC + HMAC autenticado) antes de ser persistida no Postgres, e descriptografada apenas na camada de serviço ao montar a resposta:
 
@@ -463,7 +463,7 @@ PII (`full_name` do perfil de usuário) é criptografada com Fernet (AES-128-CBC
 - Chave via variável de ambiente `FIELD_ENCRYPTION_KEY` (ver [`.env.example`](.env.example)), nunca hardcoded.
 - Migração [`0002_widen_full_name_for_encryption.py`](services/user-service/migrations/versions/0002_widen_full_name_for_encryption.py) amplia a coluna de `VARCHAR(120)` para `TEXT`, já que o ciphertext é maior que o texto original.
 
-### 15.2 Hardening de API
+### 16.2 Hardening de API
 
 | Controle | Onde | Detalhe |
 |---|---|---|
@@ -471,7 +471,7 @@ PII (`full_name` do perfil de usuário) é criptografada com Fernet (AES-128-CBC
 | Validação de entrada | Pydantic v2 em todos os schemas de request | Rejeita payload malformado antes de chegar à camada de serviço |
 | JWT seguro | [`packages/shared/src/ford_shared/security/jwt.py`](packages/shared/src/ford_shared/security/jwt.py) | Tokens agora carregam `iss` (`ford-auth-service`) e `aud` (`ford-api`), e `decode()` valida ambos explicitamente via `jwt.decode(..., issuer=ISSUER, audience=AUDIENCE)` — sem isso, `python-jose` ignora essas claims silenciosamente mesmo que estejam no payload |
 
-### 15.3 Controle de acesso por perfil (RBAC)
+### 16.3 Controle de acesso por perfil (RBAC)
 
 Papéis reais do Ford-api: `user` < `analyst` < `admin` (hierarquia em [`packages/shared/src/ford_shared/security/rbac.py`](packages/shared/src/ford_shared/security/rbac.py)). Auditoria dos 4 serviços confirmou que o controle de acesso já é aplicado corretamente:
 
@@ -481,7 +481,7 @@ Papéis reais do Ford-api: `user` < `analyst` < `admin` (hierarquia em [`package
 
 Nenhuma escalação de privilégio ou bypass de propriedade foi encontrada; o trabalho de hardening deste item foi consolidar a aplicação de rate limit no `vehicle-service` (item 15.2) para que a superfície de enumeração fique consistente entre endpoints do mesmo controller.
 
-### 15.4 IaC security
+### 16.4 IaC security
 
 - **Dockerfiles** (`auth-service`, `user-service`, `vehicle-service`, `audit-service`): adicionado `HEALTHCHECK` apontando para o endpoint de liveness de cada serviço (`/auth/health`, `/users/health`, `/vehicles/health`, `/audit/health`), usando `urllib` da stdlib — evita instalar `curl` na imagem só para o probe.
 - **[`docker-compose.yml`](docker-compose.yml)**: Postgres, RabbitMQ e Redis passaram de `ports:` (publicados no host) para `expose:` (visíveis só na rede interna do Compose) — mesma postura que os 4 serviços de aplicação já seguiam. Reduz a superfície de ataque em ambientes onde o host tem outras interfaces de rede expostas.
@@ -489,11 +489,11 @@ Nenhuma escalação de privilégio ou bypass de propriedade foi encontrada; o tr
 
 ---
 
-## 16. Sprint 3 — Cybersecurity: Observabilidade, Monitoramento e Resposta (C3)
+## 17. Sprint 3 — Cybersecurity: Observabilidade, Monitoramento e Resposta (C3)
 
 Objetivo: mostrar como o sistema detecta, registra e responde a incidentes. O rubric original cita métricas "API, mobile, IoT, ML" — o Ford-api não tem app mobile nem componente IoT; o item foi adaptado para API (os 4 serviços HTTP) e para a chamada à API do Claude em `vehicle-service` (o único componente de IA/ML do projeto).
 
-### 16.1 Logs estruturados
+### 17.1 Logs estruturados
 
 Todo `logging.getLogger(__name__)` já existente no código (controllers, event bus, consumers, error handlers) agora é renderizado como uma única linha JSON, sem precisar tocar em nenhum call site:
 
@@ -509,14 +509,14 @@ Exemplo de linha de log (login falho):
 {"event": "auth.login_failed", "email": "user@example.com", "level": "warning", "logger": "auth_service.services.auth_service", "service": "auth-service", "timestamp": "2026-09-25T14:02:11.093Z"}
 ```
 
-### 16.2 Alterações críticas viram evento auditável
+### 17.2 Alterações críticas viram evento auditável
 
 `user-service`'s `PUT /{user_id}/role` (troca de papel — a superfície de escalação de privilégio mais sensível do sistema) não publicava nenhum evento antes deste trabalho, ao contrário de registro/login/falha de login, que já eram capturados. Adicionado:
 
 - `EventType.ROLE_CHANGED` (`user.role_changed`) em [`packages/shared/src/ford_shared/events/schemas.py`](packages/shared/src/ford_shared/events/schemas.py), com `actor_user_id`, `user_id`, `previous_role`, `new_role`.
 - `ProfileService.update_role()` agora publica esse evento — capturado automaticamente pelo consumer wildcard (`#`) do `audit-service`, o mesmo pipeline que já persiste `user.registered`, `user.logged_in` e `auth.failed` de forma assinada (HMAC) e imutável.
 
-### 16.3 Métricas e alertas
+### 17.3 Métricas e alertas
 
 | O quê | Onde | Detalhe |
 |---|---|---|
@@ -525,7 +525,7 @@ Exemplo de linha de log (login falho):
 | Scrape config | [`infra/prometheus/prometheus.yml`](infra/prometheus/prometheus.yml) | Prometheus faz scrape dos 4 `/metrics` a cada 15s |
 | Regras de alerta | [`infra/prometheus/alerts.yml`](infra/prometheus/alerts.yml) | `HighHttp5xxRate` (>5% de 5xx em 5 min), `HighRequestLatencyP95` (p95 > 2s), `AuthFailedSpike` (possível brute-force/credential stuffing em `/auth/login`), `ClaudeApiFailureSpike` (degradação do provedor de IA) |
 
-### 16.4 Dashboards
+### 17.4 Dashboards
 
 - [`docker-compose.yml`](docker-compose.yml) ganhou os serviços `prometheus` (porta 9090) e `grafana` (porta 3000), com Grafana já provisionado via arquivos versionados — sem clique manual:
   - [`infra/grafana/provisioning/datasources/prometheus.yml`](infra/grafana/provisioning/datasources/prometheus.yml) — datasource Prometheus.
@@ -533,7 +533,7 @@ Exemplo de linha de log (login falho):
 
 <img width="1535" height="844" alt="image" src="https://github.com/user-attachments/assets/2cc02a19-d1c2-45f6-a76e-4965b12defee" />
 
-### 16.5 Plano de resposta a incidentes
+### 17.5 Plano de resposta a incidentes
 
 | Fase | O que significa no Ford-api | Ferramenta/evidência |
 |---|---|---|
@@ -547,11 +547,11 @@ Esse fluxo é possível porque as três pernas de observabilidade construídas n
 
 ---
 
-## 17. Sprint 3 — Cybersecurity: Compliance, Riscos e Segurança Contínua (C4)
+## 18. Sprint 3 — Cybersecurity: Compliance, Riscos e Segurança Contínua (C4)
 
 Objetivo: demonstrar que o sistema segue boas práticas, normas e políticas de segurança — revisão final dos riscos, mapeamento contra normas reconhecidas e um plano de segurança contínua (não apenas "no dia do commit").
 
-### 17.1 Revisão final de riscos (STRIDE + DevSecOps)
+### 18.1 Revisão final de riscos (STRIDE + DevSecOps)
 
 | Categoria STRIDE | Ameaça no Ford-api | Mitigação | Onde |
 |---|---|---|---|
@@ -564,7 +564,7 @@ Objetivo: demonstrar que o sistema segue boas práticas, normas e políticas de 
 
 **Risco residual conhecido**: não há rotação automática de segredos (`JWT_SECRET`, `EVENT_SIGNING_SECRET`, `FIELD_ENCRYPTION_KEY`) nem KMS/HSM — hoje eles vivem em `.env`. Aceito para o escopo do desafio; documentado aqui em vez de ignorado.
 
-### 17.2 Mapeamento com normas e boas práticas
+### 18.2 Mapeamento com normas e boas práticas
 
 | Norma | Aplicabilidade | Como o Ford-api atende (ou por que não se aplica) |
 |---|---|---|
@@ -573,7 +573,7 @@ Objetivo: demonstrar que o sistema segue boas práticas, normas e políticas de 
 | **OWASP API Top 10** | Aplica-se diretamente | API1 (BOLA): todo recurso é filtrado pelo `user_id`/`auth_user_id` do JWT, nunca por ID solto na URL sem checagem de posse. API2 (broken auth): JWT + refresh rotativo revogável. API4 (resource consumption): rate limiting (§5) + `client_max_body_size`. API5 (BFLA): `require_role` por rota. API8 (security misconfig): `HEALTHCHECK` + headers de segurança + CORS restrito (§15) |
 | **LGPD** | Aplica-se — `full_name`, `email` são dados pessoais | Minimização: só se coleta o necessário para autenticação/perfil. Cifra em repouso para `full_name` (dado pessoal mais sensível do schema). Direito de retificação: `PATCH /users/me` permite o titular corrigir o próprio nome. Não há coleta de telemetria/geolocalização — o Ford-api não tem componente IoT/dispositivo, logo esse subitem da LGPD citado no rubric não se aplica |
 
-### 17.3 Plano de segurança contínua
+### 18.3 Plano de segurança contínua
 
 | Rotina | Frequência | Implementação |
 |---|---|---|
@@ -582,7 +582,7 @@ Objetivo: demonstrar que o sistema segue boas práticas, normas e políticas de 
 | **Auditoria de permissões** | Trimestral (manual, checklist) | Não há automação de auditoria de RBAC neste escopo — o processo recomendado é: `SELECT auth_user_id, role FROM users.user_profiles` via `audit-service`/DB direto, revisar quem tem `admin`/`analyst` e confirmar que cada um ainda deveria ter. Toda troca de papel feita pelo processo já fica registrada em `audit-service` (§16.2), então a auditoria tem trilha para conferir contra a lista atual |
 | **Backup e recuperação** | Diária (backup); sob demanda (restore) | [`infra/postgres/backup.sh`](infra/postgres/backup.sh) — `pg_dump --format=custom` de dentro do container via `docker compose exec`, salvo timestamped em `backups/` (fora do controle de versão). [`infra/postgres/restore.sh`](infra/postgres/restore.sh) — restaura um dump para o container em execução (`pg_restore --clean --if-exists`). Ambos consomem o `.env` já existente, sem segredo novo |
 
-### 17.4 Checklist de conformidade
+### 18.4 Checklist de conformidade
 
 | Item | Status |
 |---|---|
