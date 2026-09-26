@@ -11,8 +11,6 @@ O projeto cobre todos os critérios da Sprint **SOA + Web Services (100 pts)** e
 | Felipe Cerboncini Cordeiro | 554909 |
 | Pedro Henrique Martins Alves dos Santos | 558107 |
 | Milena Codinhoto da Silva | 554682 |
-| Anthony K. Motobe | 558488 |
-| Evellyn Valencia | 557929 |
 
 ---
 
