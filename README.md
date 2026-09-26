@@ -335,14 +335,9 @@ uv run pytest services/vehicle-service/tests/test_vehicle_api.py::test_query_ups
 
 ### Evidência de execução
 
-```
-$ uv run pytest packages services -q
-........................................................................ [ 92%]
-......                                                                   [100%]
-======================== 78 passed, 6 warnings in 4.09s ========================
-```
+<img width="1452" height="858" alt="image" src="https://github.com/user-attachments/assets/b9fcd99b-c416-4043-812b-d3a189850b50" />
 
-Os 6 warnings são deprecations internas do Starlette (`HTTP_422_UNPROCESSABLE_ENTITY`),
+Os 18 warnings são deprecations internas do Starlette (`HTTP_422_UNPROCESSABLE_ENTITY`),
 não relacionadas ao código do projeto.
 
 ---
